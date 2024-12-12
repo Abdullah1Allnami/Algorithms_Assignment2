@@ -8,5 +8,5 @@ Implementation for all the tasks
 | Task#     | Person      | Status      |
 | --------- | ----------- |-------------|
 | Task1     | Abdullwahab | Done        |
-| Task2     | Abdullah    | in progress |
-| Task3     | Hassan      | in progress |
+| Task2     | Abdullah    | Done        |
+| Task3     | Hassan      | Done        |
