@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <unordered_map>
 using namespace std;
 
 template <typename TKey, typename TValue>
@@ -44,12 +45,30 @@ public:
         }
     }
 
+    // Fixed search function to match requirements
+    pair<bool, TValue> search(const TKey& key) {
+        Node* current = header;
+
+        for (int i = level; i >= 0; i--) {
+            while (current->forward[i] != nullptr && current->forward[i]->key < key) {
+                current = current->forward[i];
+            }
+        }
+
+        current = current->forward[0];
+
+        if (current != nullptr && current->key == key) {
+            return { true, current->value };
+        }
+        return { false, TValue{} };
+    }
+
     void insert(const TKey& key, const TValue& value) {
         vector<Node*> update(maxLevel + 1, nullptr);
         Node* current = header;
 
         for (int i = level; i >= 0; i--) {
-            while (current->forward[i] != nullptr && current->forward[i]->key > key) {
+            while (current->forward[i] != nullptr && current->forward[i]->key < key) {
                 current = current->forward[i];
             }
             update[i] = current;
@@ -77,12 +96,12 @@ public:
         }
     }
 
-    void erase(const TKey& key) {
+    bool erase(const TKey& key) {
         vector<Node*> update(maxLevel + 1, nullptr);
         Node* current = header;
 
         for (int i = level; i >= 0; i--) {
-            while (current->forward[i] != nullptr && current->forward[i]->key > key) {
+            while (current->forward[i] != nullptr && current->forward[i]->key < key) {
                 current = current->forward[i];
             }
             update[i] = current;
@@ -100,7 +119,9 @@ public:
             while (level > 0 && header->forward[level] == nullptr) {
                 level--;
             }
+            return true;
         }
+        return false;
     }
 
     vector<pair<TKey, TValue>> getTopN(int n) const {
@@ -117,26 +138,48 @@ public:
 
 class GameManager {
 private:
-    SkipList<int, string> skipList;
+    SkipList<int, string> scoreList;
+    unordered_map<string, int> playerScores;  // Track current scores for each player
 
 public:
-    GameManager() : skipList(5, 0.5) {}
+    GameManager() : scoreList(16, 0.5) {}  // Increased max level for better performance
 
     void addPlayer(const string& playerId) {
-        skipList.insert(0, playerId);
+        if (playerScores.find(playerId) == playerScores.end()) {
+            playerScores[playerId] = 0;
+            scoreList.insert(0, playerId);
+        }
     }
 
-    void removePlayer(const string& playerId, int score) {
-        skipList.erase(score);
+    bool removePlayer(const string& playerId) {
+        auto it = playerScores.find(playerId);
+        if (it != playerScores.end()) {
+            scoreList.erase(it->second);
+            playerScores.erase(it);
+            return true;
+        }
+        return false;
     }
 
-    void updateScore(const string& playerId, int oldScore, int newScore) {
-        skipList.erase(oldScore);
-        skipList.insert(newScore, playerId);
+    bool updateScore(const string& playerId, int newScore) {
+        auto it = playerScores.find(playerId);
+        if (it != playerScores.end()) {
+            int oldScore = it->second;
+            scoreList.erase(oldScore);
+            scoreList.insert(newScore, playerId);
+            it->second = newScore;
+            return true;
+        }
+        return false;
+    }
+
+    int getPlayerScore(const string& playerId) const {
+        auto it = playerScores.find(playerId);
+        return (it != playerScores.end()) ? it->second : -1;
     }
 
     vector<pair<int, string>> getLeaderboard(int n) const {
-        return skipList.getTopN(n);
+        return scoreList.getTopN(n);
     }
 };
 
@@ -145,18 +188,31 @@ int main() {
 
     GameManager game;
 
-    // Add players
+    // Test player management
     game.addPlayer("Alice");
     game.addPlayer("Bob");
     game.addPlayer("Charlie");
 
-    // Update scores
-    game.updateScore("Alice", 0, 50);
-    game.updateScore("Bob", 0, 40);
-    game.updateScore("Charlie", 0, 30);
+    // Test score updates
+    game.updateScore("Alice", 50);
+    game.updateScore("Bob", 40);
+    game.updateScore("Charlie", 30);
 
-    // Get leaderboard
-    cout << "Leaderboard:\n";
+    // Test score retrieval
+    cout << "Alice's score: " << game.getPlayerScore("Alice") << endl;
+    cout << "Bob's score: " << game.getPlayerScore("Bob") << endl;
+
+    // Test leaderboard
+    cout << "\nLeaderboard:\n";
+    for (const auto& player : game.getLeaderboard(3)) {
+        cout << player.second << " with score " << player.first << "\n";
+    }
+
+    // Test player removal
+    cout << "\nRemoving Bob...\n";
+    game.removePlayer("Bob");
+
+    cout << "Updated Leaderboard:\n";
     for (const auto& player : game.getLeaderboard(3)) {
         cout << player.second << " with score " << player.first << "\n";
     }
