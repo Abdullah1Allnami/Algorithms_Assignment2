@@ -2,107 +2,95 @@
 
 using namespace std;
 
-struct Node
-{
+struct Node {
     int data;
     string color;
-    Node *left, *right, *parent;
+    Node *left, *right, *p;
 
-    Node(int data) : data(data), color("red"), left(nullptr), right(nullptr), parent(nullptr) {}
+    Node(int data) : data(data), color("red"), left(nullptr), right(nullptr), p(nullptr) {
+    }
 };
 
-class RBT
-{
+class RBT {
 private:
     Node *root;
 
-    void leftRotate(Node *&node)
-    {
+    void leftRotate(Node *&node) {
         Node *right = node->right;
         node->right = right->left;
-        if (right->left != nullptr)
-            right->left->parent = node; // link RL with it's parent
 
-        right->parent = node->parent;
-        if (node->parent == nullptr)
+        if (right->left != nullptr)
+            right->left->p = node; // link RL with it's p
+        right->p = node->p;
+        if (node->p == nullptr)
             root = right;
-        else if (node == node->parent->left)
-            node->parent->left = right;
+        else if (node == node->p->left)
+            node->p->left = right;
         else
-            node->parent->right = right;
+            node->p->right = right;
 
         right->left = node;
-        node->parent = right;
+        node->p = right;
     }
 
-    void rightRotate(Node *&node)
-    {
+    void rightRotate(Node *&node) {
         Node *left = node->left;
         node->left = left->right;
         if (left->right != nullptr)
-            left->right->parent = node;
+            left->right->p = node;
 
-        left->parent = node->parent;
-        if (node->parent == nullptr)
+        left->p = node->p;
+        if (node->p == nullptr)
             root = left;
-        else if (node == node->parent->left)
-            node->parent->left = left;
+        else if (node == node->p->left)
+            node->p->left = left;
         else
-            node->parent->right = left;
+            node->p->right = left;
 
         left->right = node;
-        node->parent = left;
+        node->p = left;
     }
 
-    void fixInsert(Node *&node)
-    {
-        while (node->parent && node->parent->color == "red")
-        {
-            Node *gp = node->parent->parent;
+    void fixInsert(Node *&node) {
+        while (node->p && node->p->color == "red") {
+            Node *gp = node->p->p;
 
             if (!gp)
                 break;
 
-            if (node->parent == gp->left)
-            {
+            if (node->p == gp->left) {
                 Node *uncle = gp->right;
                 if (uncle && uncle->color == "red") // recoloring just
                 {
-                    node->parent->color = "black";
+                    node->p->color = "black";
                     uncle->color = "black";
                     gp->color = "red";
                     node = gp;
-                }
-                else
-                {
-                    if (node == node->parent->right) // left right case
+                } else {
+                    if (node == node->p->right) // left right case
                     {
-                        node = node->parent;
+                        node = node->p;
                         leftRotate(node);
                     }
-                    node->parent->color = "black";
+                    node->p->color = "black";
                     gp->color = "red";
                     rightRotate(gp); // left left case
                 }
-            }
-            else
-            {
+            } else {
                 Node *uncle = gp->left;
                 if (uncle && uncle->color == "red") // recoloring just
                 {
-                    node->parent->color = "black";
+                    node->p->color = "black";
                     uncle->color = "black";
                     gp->color = "red";
                     node = gp;
-                }
-                else
-                {
-                    if (node == node->parent->left) // right left case
+                } else {
+                    if (node == node->p->left) // right left case
                     {
-                        node = node->parent;
+                        node = node->p;
                         rightRotate(node);
                     }
-                    node->parent->color = "black";
+                    node->p->color = "black";
                     gp->color = "red";
                     leftRotate(gp); // right right case
                 }
@@ -111,84 +99,67 @@ private:
         root->color = "black";
     }
 
-    void fixDelete(Node *&node)
-    {
-        while (node != root && (!node || node->color == "black"))
-        {
-            if (node == node->parent->left)
-            {
-                Node *sibling = node->parent->right;
-                if (sibling && sibling->color == "red")
-                {
+    void fixDelete(Node *&node) {
+        while (node != root && (!node || node->color == "black")) {
+            if (node == node->p->left) {
+                Node *sibling = node->p->right;
+                if (sibling && sibling->color == "red") {
                     sibling->color = "black";
-                    node->parent->color = "red";
-                    leftRotate(node->parent);
-                    sibling = node->parent->right;
+                    node->p->color = "red";
+                    leftRotate(node->p);
+                    sibling = node->p->right; // point to the new sibling
                 }
                 if ((!sibling || sibling->left == nullptr || sibling->left->color == "black") &&
-                    (!sibling || sibling->right == nullptr || sibling->right->color == "black"))
-                {
+                    (!sibling || sibling->right == nullptr || sibling->right->color == "black")) {
                     if (sibling)
                         sibling->color = "red";
-                    node = node->parent;
-                }
-                else
-                {
-                    if (!sibling || sibling->right == nullptr || sibling->right->color == "black")
-                    {
+                    node = node->p;
+                } else {
+                    if (!sibling || sibling->right == nullptr || sibling->right->color == "black") {
                         if (sibling && sibling->left)
                             sibling->left->color = "black";
                         if (sibling)
                             sibling->color = "red";
                         rightRotate(sibling);
-                        sibling = node->parent->right;
+                        sibling = node->p->right;
                     }
-                    if (sibling)
-                    {
-                        sibling->color = node->parent->color;
-                        node->parent->color = "black";
+                    if (sibling) { // the two children is red
+                        sibling->color = node->p->color;
+                        node->p->color = "black";
                         if (sibling->right)
                             sibling->right->color = "black";
-                        leftRotate(node->parent);
+                        leftRotate(node->p);
                     }
                     node = root;
                 }
-            }
-            else
-            {
-                Node *sibling = node->parent->left;
-                if (sibling && sibling->color == "red")
-                {
+            } else {
+                Node *sibling = node->p->left;
+                if (sibling && sibling->color == "red") {
                     sibling->color = "black";
-                    node->parent->color = "red";
-                    rightRotate(node->parent);
-                    sibling = node->parent->left;
+                    node->p->color = "red";
+                    rightRotate(node->p);
+                    sibling = node->p->left;
                 }
                 if ((!sibling || sibling->left == nullptr || sibling->left->color == "black") &&
-                    (!sibling || sibling->right == nullptr || sibling->right->color == "black"))
-                {
+                    (!sibling || sibling->right == nullptr || sibling->right->color == "black")) {
                     if (sibling)
                         sibling->color = "red";
-                    node = node->parent;
-                }
-                else
-                {
-                    if (!sibling || sibling->left == nullptr || sibling->left->color == "black")
-                    {
+                    node = node->p;
+                } else {
+                    if (!sibling || sibling->left == nullptr || sibling->left->color == "black") {
                         if (sibling && sibling->right)
                             sibling->right->color = "black";
                         if (sibling)
                             sibling->color = "red";
                         leftRotate(sibling);
-                        sibling = node->parent->left;
+                        sibling = node->p->left;
                     }
-                    if (sibling)
-                    {
-                        sibling->color = node->parent->color;
-                        node->parent->color = "black";
+                    if (sibling) {
+                        sibling->color = node->p->color;
+                        node->p->color = "black";
                         if (sibling->left)
                             sibling->left->color = "black";
-                        rightRotate(node->parent);
+                        rightRotate(node->p);
                     }
                     node = root;
                 }
@@ -198,61 +169,56 @@ private:
             node->color = "black";
     }
 
-    void transplant(Node *u, Node *v)
-    {
-        if (u->parent == nullptr)
+    void transplant(Node *u, Node *v) {
+        if (u->p == nullptr)
             root = v;
-        else if (u == u->parent->left)
-            u->parent->left = v;
+        else if (u == u->p->left)
+            u->p->left = v;
         else
-            u->parent->right = v;
+            u->p->right = v;
 
         if (v)
-            v->parent = u->parent;
+            v->p = u->p;
     }
 
-    Node *minimum(Node *node)
-    {
+    Node *minimum(Node *node) {
         while (node->left != nullptr)
             node = node->left;
         return node;
     }
 
 public:
-    RBT() : root(nullptr) {}
+    RBT() : root(nullptr) {
+    }
 
-    void insert(int data)
-    {
+    void insert(int data) {
         Node *new_node = new Node(data);
-        Node *parent = nullptr;
+        Node *p = nullptr;
         Node *cur = root;
 
-        while (cur != nullptr)
-        {
-            parent = cur;
+        while (cur != nullptr) {
+            p = cur;
             if (new_node->data < cur->data)
                 cur = cur->left;
             else
                 cur = cur->right;
         }
 
-        new_node->parent = parent; // link it with the father
+        new_node->p = p; // link it with the father
 
-        if (parent == nullptr)
+        if (p == nullptr)
             root = new_node;
-        else if (new_node->data < parent->data) // link the father with it
-            parent->left = new_node;
+        else if (new_node->data < p->data) // link the father with it
+            p->left = new_node;
         else
-            parent->right = new_node;
+            p->right = new_node;
 
         fixInsert(new_node);
     }
 
-    void deleteNode(int data)
-    {
+    void deleteNode(int data) {
         Node *cur = root;
-        while (cur != nullptr && cur->data != data)
-        {
+        while (cur != nullptr && cur->data != data) {
             if (data < cur->data)
                 cur = cur->left;
             else
@@ -266,57 +232,47 @@ public:
         Node *new_cur = nullptr;
         string successor_color = successor->color;
 
-        if (cur->left == nullptr)
-        {
+        if (cur->left == nullptr) {
             new_cur = cur->right; // Skip
             transplant(cur, cur->right);
-        }
-        else if (cur->right == nullptr)
-        {
+        } else if (cur->right == nullptr) {
             new_cur = cur->left; // Skip
             transplant(cur, cur->left);
-        }
-        else // Has left and right
+        } else // Has left and right
         {
             successor = minimum(cur->right); // Find the successor of the current node
             successor_color = successor->color;
             new_cur = successor->right;
 
-            if (successor->parent == cur) // the successsor is the right node 
+            if (successor->p == cur) // the successsor is the right node
             {
                 if (new_cur)
-                    new_cur->parent = successor; 
-            }
-            else
-            {
+                    new_cur->p = successor;// just skip
+            } else {
                 transplant(successor, successor->right);
                 successor->right = cur->right;
                 if (successor->right)
-                    successor->right->parent = successor;
+                    successor->right->p = successor;
             }
 
             transplant(cur, successor);
             successor->left = cur->left;
             if (successor->left)
-                successor->left->parent = successor;
+                successor->left->p = successor;
             successor->color = cur->color;
         }
 
         delete cur;
 
         // Fix tree if a black node was removed
-        if (successor_color == "black" && new_cur != nullptr)
-        {
+        if (successor_color == "black" && new_cur != nullptr) {
             fixDelete(new_cur);
-        }
-        else if (new_cur == nullptr && successor_color == "black")
-        {
+        } else if (new_cur == nullptr && successor_color == "black") {
             // cout << "Deleted node was black and had no children." << endl;
         }
     }
 
-    void inorderTraversal(Node *node)
-    {
+    void inorderTraversal(Node *node) {
         if (node == nullptr)
             return;
 
@@ -325,21 +281,19 @@ public:
         inorderTraversal(node->right);
     }
 
-    void display()
-    {
+    void display() {
         inorderTraversal(root);
         cout << endl;
     }
 };
 
-int main()
-{
+int main() {
     RBT tree;
     tree.insert(30);
     tree.insert(20);
     tree.insert(25);
-    tree.insert(10); 
-    tree.insert(40); 
+    tree.insert(10);
+    tree.insert(40);
     tree.insert(35);
     tree.insert(50);
     tree.display();
